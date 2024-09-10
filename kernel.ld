@@ -34,7 +34,7 @@ SECTIONS
  
     __bss_start = .;
     .bss :
-    {
+   {
         bss = .;
         *(.bss)
     }
