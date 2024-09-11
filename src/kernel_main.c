@@ -1,5 +1,4 @@
 
-
 char glbl[128];
 
 void kernel_main() {
