@@ -7,6 +7,17 @@ unsigned long get_timer_count() {
      return *timer_count_register;
 }
 
+void wait_1ms() {
+    unsigned long start_time = get_timer_count();
+    unsigned long target = 1000;
+    // compute the end time
+    unsigned long end_time = start_time + target;
+    // wait until the current time is past the end time
+    while(get_timer_count() < end_time) {
+    }
+}
+
+
 void kernel_main() {
     get_timer_count();
     extern int __bss_start, __bss_end;
