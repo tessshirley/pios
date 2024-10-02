@@ -2,6 +2,7 @@
 //#include <stdef.h>
 #include "rprintf.h"
 #include "serial.h"
+#include "page.h"
 
 char glbl[128];
 
@@ -37,6 +38,23 @@ void kernel_main() {
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
     esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
+
+    // initialize the page fram allocator
+    init_pfa_list();
+    esp_printf(my_putc, "Page frame allocator initialized.\r\n");
+
+    // allocate 2 pages for testing
+    struct ppage *allocated_pages = allocate_physical_pages(2);
+    if(allocated_pages) {
+        esp_printf(my_putc, "Allocated 2 physical pages.\r\n");
+    } else {
+	esp_printf(my_putc, "Failed to allocate pages.\r\n");
+    }
+
+    // free allocated pages
+    free_physical_pages(allocated_pages);
+    esp_printf(my_putc, "Freed allocated pages.\r\n");
+    
     // zero out the bss segment
     bssstart = &__bss_start;
     bssend = &__bss_end;
