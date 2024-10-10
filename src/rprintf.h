@@ -23,3 +23,4 @@ void esp_vprintf( const func_ptr f_ptr, charptr ctrl, va_list argp);
 void esp_printf( const func_ptr f_ptr, charptr ctrl, ...);
 void printk(charptr ctrl, ...);
 
+#endif // __RPRINTF_H__

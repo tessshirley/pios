@@ -31,6 +31,16 @@ int getEL() {
    return el>>2;
 }
 
+int count_allocated_pages(struct ppage *list){
+    int count = 0;
+    struct ppage *current = list;
+    while(current){
+        count++;
+	current = current->next;
+    }
+    return count;
+}
+
 
 void kernel_main() {
     get_timer_count();
@@ -43,10 +53,10 @@ void kernel_main() {
     init_pfa_list();
     esp_printf(my_putc, "Page frame allocator initialized.\r\n");
 
-    // allocate 2 pages for testing
-    struct ppage *allocated_pages = allocate_physical_pages(2);
+    // allocate n pages for testing
+    struct ppage *allocated_pages= allocate_physical_pages(128);
     if(allocated_pages) {
-        esp_printf(my_putc, "Allocated 2 physical pages.\r\n");
+        esp_printf(my_putc, "Allocated %d physical pages.\r\n", count_allocated_pages(allocated_pages));
     } else {
 	esp_printf(my_putc, "Failed to allocate pages.\r\n");
     }
@@ -54,7 +64,27 @@ void kernel_main() {
     // free allocated pages
     free_physical_pages(allocated_pages);
     esp_printf(my_putc, "Freed allocated pages.\r\n");
-    
+   
+    // allocate all available pages
+    struct ppage *allocate_all = allocate_physical_pages(128);
+    if(allocate_all){
+        esp_printf(my_putc,"Allocated all 128 physical pages.\r\n");
+    } else {
+	esp_printf(my_putc,"Failed to allocate all pages.\r\n");
+    }
+
+    // free all
+    free_physical_pages(allocate_all);
+    esp_printf(my_putc, "Freed allocated pages.\r\n");
+
+    // allocate more pages than available
+    struct ppage *allocate_more = allocate_physical_pages(130);
+    if(allocate_more){
+        esp_printf(my_putc, "Unexpectedly allocated 130 pages.\r\n");
+    } else {
+	esp_printf(my_putc, "Correctly failed to allocate more pages than available.\r\n");
+    }
+
     // zero out the bss segment
     bssstart = &__bss_start;
     bssend = &__bss_end;
