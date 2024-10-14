@@ -6,5 +6,6 @@
 void my_putc(int data) {
     // print a single character to the serial port
     *MU_IO = data;
+    return data;
 }
 

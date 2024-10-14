@@ -3,12 +3,15 @@
 #include "rprintf.h"
 #include "serial.h"
 #include "page.h"
+#include "mmu.h"
+
+extern struct table_descriptor_stage1 L1table[]; // make L1table visible
 
 char glbl[128];
 
 
 unsigned long get_timer_count() {
-     unsigned long *timer_count_register = 0x3f003004;
+     unsigned long *timer_count_register = (unsigned long *)0x3f003004;
      return *timer_count_register;
 }
 
@@ -48,6 +51,11 @@ void kernel_main() {
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
     esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
+    
+    // testing page mapping
+    mapPages((void*)0x0, (void*)0x0);
+    // load the L1 page table and enable the MMU
+    int result = loadPageTable(L1table);
 
     // initialize the page fram allocator
     init_pfa_list();
@@ -86,8 +94,8 @@ void kernel_main() {
     }
 
     // zero out the bss segment
-    bssstart = &__bss_start;
-    bssend = &__bss_end;
+    bssstart = (char *)&__bss_start;
+    bssend = (char *)&__bss_end;
 
     while(bssstart < bssend) {
 	*bssstart++ = 0;
