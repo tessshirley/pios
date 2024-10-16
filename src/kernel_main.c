@@ -55,7 +55,8 @@ void kernel_main() {
     // testing page mapping
     mapPages((void*)0x0, (void*)0x0);
     // load the L1 page table and enable the MMU
-    int result = loadPageTable(L1table);
+   // int result = loadPageTable(L1table);
+    loadPageTable(L1table);
 
     // initialize the page fram allocator
     init_pfa_list();
