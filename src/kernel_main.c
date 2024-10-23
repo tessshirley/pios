@@ -4,6 +4,7 @@
 #include "serial.h"
 #include "page.h"
 #include "mmu.h"
+#include "fat.h"
 
 extern struct table_descriptor_stage1 L1table[]; // make L1table visible
 
@@ -101,6 +102,29 @@ void kernel_main() {
     while(bssstart < bssend) {
 	*bssstart++ = 0;
     }
+
+    // FAT filesystem test //
+    esp_printf(my_putc, "Initializing FAT filesystem...\r\n");
+
+    if(fatInit() == 0) {
+        esp_printf(my_putc, "FAT filesystem initialized successfully!\r\n");
+
+	// try opening a file from the SD card
+	if(fatOpen("MYFILE") == 0) {
+	    char file_data[1024]; // buffer for file content
+	    int bytes_read = fatRead(&my_file, file_data, sizeof(file_data));
+	    if(bytes_read > 0) {
+	        esp_printf(my_putc, "File read successfully: %s\r\n", file_data);
+	    } else {
+		esp_printf(my_putc, "Error reading file.\r\n");
+	    }
+	} else {
+	    esp_printf(my_putc, "File not found.\r\n");
+	}
+    } else {
+	esp_printf(my_putc, "Error initializing FAT filesystem.\r\n");
+    }
+
 
     while(1){
     }
