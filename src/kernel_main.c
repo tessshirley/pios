@@ -5,6 +5,7 @@
 #include "page.h"
 #include "mmu.h"
 #include "fat.h"
+#include <stdint.h>
 
 extern struct table_descriptor_stage1 L1table[]; // make L1table visible
 
@@ -16,14 +17,13 @@ unsigned long get_timer_count() {
      return *timer_count_register;
 }
 
-void wait_1ms() {
-    unsigned long start_time = get_timer_count();
-    unsigned long target = 100;
-    // compute the end time
-    unsigned long end_time = start_time + target;
-    // wait until the current time is past the end time
-    while(get_timer_count() < end_time) {
-    }
+void wait_ms(uint32_t milliseconds) {
+    // calculate the number of iterations needed for the specified milliseconds
+    uint32_t iterations = (SYSTEM_CLOCK_HZ / 1000) * milliseconds;
+    volatile uinit32_t count = 0;
+    while(count < iterations) {
+        count++;
+    
 }
 
 int getEL() {
