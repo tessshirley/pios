@@ -20,8 +20,8 @@ OBJS = \
 	rprintf.o\
 	page.o\
 	mmu.o\
-	fat.o\
 	sd.o\
+	fat.o\
 	msec.o\
 	uart.o\
 

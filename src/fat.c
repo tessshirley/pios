@@ -2,18 +2,21 @@
 #include "sd.h"
 #include "msec.h"
 #include "uart.h"
+#include "rprintf.h"
+#include "mmu.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+// global boot sector
 struct boot_sector bs;
-struct file my_file;
+
 
 // FAT initialization function
 int fatInit() {
     // initialize the SD card
     if(sd_init() != SD_OK) {
-        printf("SD card initialization failed\n");
+      // esp_printf(my_putc,"SD card initialization failed\n");
 	return -1;
     }
     uint8_t buffer[SECTOR_SIZE];
@@ -41,7 +44,7 @@ struct file *fatOpen(const char *filename) {
     uint8_t buffer[SECTOR_SIZE];
 
     // create a new file structure to hold file information
-    struct file *my_file = malloc(sizeof(struct file));
+    struct file *my_file = filename;
     if(my_file == NULL) {
 	return NULL;
     }
@@ -82,8 +85,13 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 	    if(sd_readblock(first_sector_of_cluster + i, sector_buffer, 1) != SD_OK) {
 	       return -1; // error reading sector
 	     }
-	    memcpy(buffer +  bytes_read, sector_buffer, SECTOR_SIZE);
-	    bytes_read += SECTOR_SIZE;
+	    if(bytes_read + SECTOR_SIZE > bytes_to_read) {
+	        memcpy(buffer +  bytes_read, sector_buffer, bytes_to_read - bytes_read);
+	        bytes_read += bytes_to_read;
+	    } else {
+		memcpy(buffer + bytes_read, sector_buffer, SECTOR_SIZE);
+		bytes_read += SECTOR_SIZE;
+	    }
 	}
 
 	// move to the next cluster in the FAT chain
@@ -98,44 +106,5 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 	
     }
     return bytes_read;
-}
-int main() {
-    uint8_t sector_buf[SECTOR_SIZE]; // buffer to hold file data
-    struct boot_sector *bs = (struct boot_sector*)sector_buf;
-    
-    if(sd_init() != 0) {
-	printf("Failed to initialize SD card\n");
-	return -1;
-    }
-
-    // initialize the FAT filesystem
-    if(fatInit() != 0) {
-        printf("Failed to initialize FAT filesystem\n");
-	return -1;
-    }
-
-    // open the specified file
-    struct file *file_handle = fatOpen("tess.txt");
-    if(file_handle == NULL) {
-	printf("Failed to open file\n");
-	return -1;
-    }
-
-    // read the contents of the file into the buffer
-    uint8_t buffer[CLUSTER_SIZE];
-    int bytes_read = fatRead(file_handle, buffer, sizeof(buffer));
-    if(bytes_read < 0) {
-	printf("Failed to read file data\n");
-	return -1;
-    }
-
-    // output the read data 
-    printf("Read %d bytes from %s:\n", bytes_read, file_handle->rde.file_name);
-    for(int i = 0; i < bytes_read; i++) {
-	 printf("%c ", buffer[i]);
-    }
-    printf("\n");
-
-    return 0;
 }
 

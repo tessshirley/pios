@@ -189,8 +189,8 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
 {
     int r,c=0,d;
     if(num<1) num=1;
-    //uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
-    printf("[sd_readblock] lba = %d num = %d\r\n", lba, num);
+    uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
+    //printf("[sd_readblock] lba = %d num = %d\r\n", lba, num);
     if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
     unsigned int *buf=(unsigned int *)buffer;
     if(sd_scr[0] & SCR_SUPP_CCS) {
@@ -261,12 +261,7 @@ int sd_clk(unsigned int f)
 int sd_init() {
     long r,cnt,ccs=0;
     // GPIO_CD
-    r= *GPFSEL4;// read the current value
-    r &= ~(7<<(7*3)); // modify it 
-    *GPFSEL4=r; // write the modified value back
-
-    printf("GPFSEL4 configured.\n");
-
+    r= *GPFSEL4; r &= ~(7<<(7*3)); *GPFSEL4=r;
     *GPPUD=2; wait_cycles(150); *GPPUDCLK1=(1<<15); wait_cycles(150); *GPPUD=0; *GPPUDCLK1=0;
     r=*GPHEN1; r|=1<<15; *GPHEN1=r;
 

@@ -1,5 +1,5 @@
 #include "list.h"
-#include <stddef.h>
+//#include <stddef.h>
 #include "rprintf.h"
 #include "serial.h"
 #include "page.h"
@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sd.h"
+#include "msec.h"
+#include "uart.h"
 
 #define SYSTEM_CLOCK_HZ 1000000 // for wait_ms()
 
@@ -27,24 +29,73 @@ unsigned long get_timer_count() {
      return *timer_count_register;
 }
 
-void wait_msec(uint32_t milliseconds) {
-    // calculate the number of iterations needed for the specified milliseconds
-    uint32_t iterations = (SYSTEM_CLOCK_HZ / 1000) * milliseconds;
-    volatile uint32_t count = 0;
-    while(count < iterations) {
-        count++;
-    }    
+void *memcpy(void *dest, const void *src, size_t n) {
+    char *d = dest;
+    const char *s = src;
+    while (n--) {
+        *d++ = *s++;
+    }
+    return dest;
 }
+
+int strncmp(const char *s1, const char *s2, size_t n) {
+    while (n-- > 0) {
+        if (*s1 != *s2) {
+            return *(unsigned char *)s1 - *(unsigned char *)s2;
+        }
+        if (*s1 == '\0') {
+            break;
+        }
+        s1++;
+        s2++;
+    }
+    return 0;
+}
+
+// wait_msec() moved to msec.c
 
 void kernel_main() {
     get_timer_count();
     wait_msec(1000);
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
-    esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
+   // esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
     
-    // FAT Tests
-    
+    // FAT Tests //
+    // initialize the SD card
+    if(sd_init() != SD_OK) {
+       esp_printf(my_putc, "Failed to initialize SD card\n");
+        return -1;
+    }
+
+    // initialize the FAT filesystem
+    if(fatInit() != 0) {
+        esp_printf(my_putc, "Failed to initialize FAT filesystem\n");
+        return -1;
+    }
+
+    // open the specified file
+    struct file *file_handle = fatOpen("/mnt/disk/tess.txt");
+    if(file_handle == NULL) {
+        esp_printf(my_putc, "Failed to open file\n");
+        return -1;
+    }
+
+    // read the contents of the file into the buffer
+    uint8_t buffer[CLUSTER_SIZE];
+    int bytes_read = fatRead(file_handle, buffer, sizeof(buffer));
+    if(bytes_read < 0) {
+         esp_printf(my_putc, "Failed to read file data\n");
+        return -1;
+    }
+
+    // output the read data 
+    esp_printf(my_putc, "Read %d bytes from %s:\n", bytes_read, file_handle->rde.file_name);
+    for(int i = 0; i < bytes_read; i++) {
+         esp_printf(my_putc, "%c ", buffer[i]);
+    }
+    esp_printf(my_putc,"\n");
+ /*   
 
     // testing page mapping
     mapPages((void*)0x0, (void*)0x0);
@@ -87,7 +138,7 @@ void kernel_main() {
     } else {
 	esp_printf(my_putc, "Correctly failed to allocate more pages than available.\r\n");
     }
-
+  */
     // zero out the bss segment
     bssstart = (char *)&__bss_start;
     bssend = (char *)&__bss_end;
