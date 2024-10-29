@@ -6,6 +6,7 @@
 
 #define CLUSTER_SIZE 4096
 #define SECTORS_PER_CLUSTER (CLUSTER_SIZE/SECTOR_SIZE)
+#define SECTOR_SIZE 512
 
 #define FILE_ATTRIBUTE_SUBDIRECTORY 0x10
 
@@ -79,10 +80,5 @@ struct file {
     uint32_t start_cluster;
 };
 
-// function prototypes
-int fatInit();
-int fatOpen(const char *filename);
-int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read);
 
 #endif
-

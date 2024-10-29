@@ -6,53 +6,62 @@
 #include "mmu.h"
 #include "fat.h"
 #include <stdint.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include "sd.h"
+
+#define SYSTEM_CLOCK_HZ 1000000 // for wait_ms()
 
 extern struct table_descriptor_stage1 L1table[]; // make L1table visible
 
 char glbl[128];
 
+char buffer[512];
+
+struct file  my_file;
 
 unsigned long get_timer_count() {
      unsigned long *timer_count_register = (unsigned long *)0x3f003004;
      return *timer_count_register;
 }
 
-void wait_ms(uint32_t milliseconds) {
+void wait_msec(uint32_t milliseconds) {
     // calculate the number of iterations needed for the specified milliseconds
     uint32_t iterations = (SYSTEM_CLOCK_HZ / 1000) * milliseconds;
-    volatile uinit32_t count = 0;
+    volatile uint32_t count = 0;
     while(count < iterations) {
         count++;
-    
+    }    
 }
-
-int getEL() {
-   unsigned int el;
-   asm("mrs %0,CurrentEL"
-    : "=r"(el)
-    :
-    :);
-   return el>>2;
-}
-
-int count_allocated_pages(struct ppage *list){
-    int count = 0;
-    struct ppage *current = list;
-    while(current){
-        count++;
-	current = current->next;
-    }
-    return count;
-}
-
 
 void kernel_main() {
     get_timer_count();
-    wait_1ms();
+    wait_ms(1000);
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
     esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
     
+    // FAT Tests
+    if(fatInit() != 0) {
+       rprintf("FAT Initialization Failed.\n");
+       return -1;
+    }
+
+    struct file *f = fatOpen("/BIN/BASH");
+    if(!f) {
+        rprintf("Failed to open file: %d\n", f);
+	return -1;
+    }
+
+    char buffer[512];
+    int bytes_read = fatRead(f, buffer, sizeof(buffer));
+    if(bytes_read < 0) {
+        printf("Failed to read file data.\n");
+    }else{
+	printf("Read %d bytes from file: %.*s\n", bytes_read, bytes_read, buffer);
+    }
+
     // testing page mapping
     mapPages((void*)0x0, (void*)0x0);
     // load the L1 page table and enable the MMU
@@ -102,31 +111,4 @@ void kernel_main() {
     while(bssstart < bssend) {
 	*bssstart++ = 0;
     }
-
-    // FAT filesystem test //
-    esp_printf(my_putc, "Initializing FAT filesystem...\r\n");
-
-    if(fatInit() == 0) {
-        esp_printf(my_putc, "FAT filesystem initialized successfully!\r\n");
-
-	// try opening a file from the SD card
-	if(fatOpen("MYFILE") == 0) {
-	    char file_data[1024]; // buffer for file content
-	    int bytes_read = fatRead(&my_file, file_data, sizeof(file_data));
-	    if(bytes_read > 0) {
-	        esp_printf(my_putc, "File read successfully: %s\r\n", file_data);
-	    } else {
-		esp_printf(my_putc, "Error reading file.\r\n");
-	    }
-	} else {
-	    esp_printf(my_putc, "File not found.\r\n");
-	}
-    } else {
-	esp_printf(my_putc, "Error initializing FAT filesystem.\r\n");
-    }
-
-
-    while(1){
-    }
-
 }
