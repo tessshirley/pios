@@ -4,6 +4,7 @@
 #include "uart.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 struct boot_sector bs;
 struct file my_file;
@@ -30,14 +31,20 @@ int fatInit() {
 }
 
 // function to open a file
-int fatOpen(const char *filename) {
+struct file *fatOpen(const char *filename) {
     uint32_t root_dir_sector = bs.num_reserved_sectors + (bs.num_fat_tables + bs.num_sectors_per_fat);
     uint8_t buffer[SECTOR_SIZE];
+
+    // create a new file structure to hold file information
+    struct file *my_file = malloc(sizeof(struct file));
+    if(my_file == NULL) {
+	return NULL;
+    }
 
     // iterate through root directory
     for(uint32_t sector = 0; sector < bs.num_root_dir_entries * sizeof(struct root_directory_entry) / SECTOR_SIZE; ++sector) {
         if(sd_readblock(root_dir_sector + sector, buffer, 1) != SD_OK) {
-            return -1; // error reading root directory
+            return NULL; // error reading root directory
 	}
         struct root_directory_entry *rde = (struct root_directory_entry *) buffer;
 
@@ -45,13 +52,13 @@ int fatOpen(const char *filename) {
 	for(int i = 0; i < SECTOR_SIZE / sizeof(struct root_directory_entry); ++i) {
 	    if(strncmp(rde[i].file_name, filename, 8) == 0) {
 		// found the file, store it in my_file structure
-		my_file.rde = rde[i];
-		my_file.start_cluster = rde[i].cluster;
-		return 0; // file found
+		my_file->rde = rde[i];
+		my_file->start_cluster = rde[i].cluster;
+		return my_file; // file found
 	     }
 	}
     }
-    return -1; // file not found
+    return NULL; // file not found
 }
 
 // fuunction to read data from an open file
@@ -88,12 +95,11 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
     return bytes_read;
 }
 int main() {
-    uint8_t buffer[SECTOR_SIZE]; // buffer to hold file data
-    const char *filename = "TESS   ";
+    uint8_t sector_buf[SECTOR_SIZE]; // buffer to hold file data
+    struct boot_sector *bs = (struct boot_sector*)sector_buf;
 
-    // initialize the sd card
-    if(sd_init() != SD_OK) {
-        printf("SD card initialization failed\n");
+    if(sd_init() != 0) {
+	printf("Failed to initialize SD card\n");
 	return -1;
     }
 
@@ -104,23 +110,24 @@ int main() {
     }
 
     // open the specified file
-    if(fatOpen(filename) != 0) {
-	printf("Failed to open file: %s\n", filename);
+    struct file *file_handle = fatOpen("rootfs.img");
+    if(file_handle == NULL) {
+	printf("Failed to open file\n");
 	return -1;
     }
 
     // read the contents of the file into the buffer
-    int bytes_to_read = SECTOR_SIZE;
-    int bytes_read = fatRead(&my_file, buffer, bytes_to_read);
+    uint8_t buffer[CLUSTER_SIZE];
+    int bytes_read = fatRead(file_handle, buffer, sizeof(buffer));
     if(bytes_read < 0) {
 	printf("Failed to read file data\n");
 	return -1;
     }
 
     // output the read data 
-    printf("Read %d bytes from %s:\n", bytes_read, filename);
+    printf("Read %d bytes from the file:\n", bytes_read);
     for(int i = 0; i < bytes_read; i++) {
-	 printf("%02x ", buffer[i]);
+	 printf("%c ", buffer[i]);
     }
     printf("\n");
 
