@@ -11,6 +11,11 @@ struct file my_file;
 
 // FAT initialization function
 int fatInit() {
+    // initialize the SD card
+    if(sd_init() != SD_OK) {
+        printf("SD card initialization failed\n");
+	return -1;
+    }
     uint8_t buffer[SECTOR_SIZE];
 
     // read the boot sector
@@ -23,7 +28,7 @@ int fatInit() {
 
     // validate the boot signature and FAT type
     const char *bs_type = bs.fs_type;
-    if(bs.boot_signature != 0xAA55 || strncmp(bs_type, "FAT12", 5) != 0) {
+    if(bs.boot_signature != 0xAA55 || strncmp(bs_type, "FAT16", 5) != 0) {
 	    return -1; // invalid filesystem
     }
 
@@ -97,7 +102,7 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 int main() {
     uint8_t sector_buf[SECTOR_SIZE]; // buffer to hold file data
     struct boot_sector *bs = (struct boot_sector*)sector_buf;
-
+    
     if(sd_init() != 0) {
 	printf("Failed to initialize SD card\n");
 	return -1;
@@ -110,7 +115,7 @@ int main() {
     }
 
     // open the specified file
-    struct file *file_handle = fatOpen("rootfs.img");
+    struct file *file_handle = fatOpen("tess.txt");
     if(file_handle == NULL) {
 	printf("Failed to open file\n");
 	return -1;
@@ -125,7 +130,7 @@ int main() {
     }
 
     // output the read data 
-    printf("Read %d bytes from the file:\n", bytes_read);
+    printf("Read %d bytes from %s:\n", bytes_read, file_handle->rde.file_name);
     for(int i = 0; i < bytes_read; i++) {
 	 printf("%c ", buffer[i]);
     }

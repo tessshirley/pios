@@ -1,5 +1,5 @@
 #include "list.h"
-//#include <stdef.h>
+#include <stddef.h>
 #include "rprintf.h"
 #include "serial.h"
 #include "page.h"
@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include "sd.h"
 
@@ -19,7 +20,7 @@ char glbl[128];
 
 char buffer[512];
 
-struct file  my_file;
+struct file *my_file;
 
 unsigned long get_timer_count() {
      unsigned long *timer_count_register = (unsigned long *)0x3f003004;
@@ -37,30 +38,13 @@ void wait_msec(uint32_t milliseconds) {
 
 void kernel_main() {
     get_timer_count();
-    wait_ms(1000);
+    wait_msec(1000);
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
     esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
     
     // FAT Tests
-    if(fatInit() != 0) {
-       rprintf("FAT Initialization Failed.\n");
-       return -1;
-    }
-
-    struct file *f = fatOpen("/BIN/BASH");
-    if(!f) {
-        rprintf("Failed to open file: %d\n", f);
-	return -1;
-    }
-
-    char buffer[512];
-    int bytes_read = fatRead(f, buffer, sizeof(buffer));
-    if(bytes_read < 0) {
-        printf("Failed to read file data.\n");
-    }else{
-	printf("Read %d bytes from file: %.*s\n", bytes_read, bytes_read, buffer);
-    }
+    
 
     // testing page mapping
     mapPages((void*)0x0, (void*)0x0);

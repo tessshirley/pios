@@ -119,6 +119,8 @@
 #define ACMD41_CMD_CCS      0x40000000
 #define ACMD41_ARG_HC       0x51ff8000
 
+#define GPFSEL4         ((volatile unsigned int*)(MMIO_BASE+0x00200010))
+
 unsigned long sd_scr[2], sd_ocr, sd_rca, sd_err, sd_hv;
 
 /**
@@ -187,8 +189,8 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
 {
     int r,c=0,d;
     if(num<1) num=1;
-    uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
-    //printk("[sd_readblock] lba = %d num = %d\r\n", lba, num);
+    //uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
+    printf("[sd_readblock] lba = %d num = %d\r\n", lba, num);
     if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
     unsigned int *buf=(unsigned int *)buffer;
     if(sd_scr[0] & SCR_SUPP_CCS) {
@@ -256,8 +258,7 @@ int sd_clk(unsigned int f)
 /**
  * initialize EMMC to read SDHC card
  */
-int sd_init()
-{
+int sd_init() {
     long r,cnt,ccs=0;
     // GPIO_CD
     r= *GPFSEL4;// read the current value
