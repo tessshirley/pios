@@ -92,8 +92,15 @@ int main() {
     uint8_t rde_region[SECTOR_SIZE];
     struct boot_sector *bs = (struct boot_sector*)sector_buf;
     struct root_directory_entry *rde = (struct root_directory_entry*)rde_region;
-    sd_init();
-    sd_readblock(0, sector_buf, 1);
+    if( sd_init() != SD_OK) {
+        printf("SD card initialization failed\n");
+	return -1;
+    }
+
+    if(sd_readblock(0, sector_buf, 1) != SD_OK) {
+	printf("Failed to read boot sector\n");
+    }
+
     for(int i = 0; i < 16; i++) {
         printf("%02x ", sector_buf[i]);
     }
@@ -105,7 +112,10 @@ int main() {
     printf("number of RDEs = %d\n", bs->num_root_dir_entries);
 
     int b_rde = bs->num_reserved_sectors + bs->num_fat_tables * bs->num_sectors_per_fat;
-    sd_readblock(b_rde, rde_region, 1);
+    if(sd_readblock(b_rde, rde_region, 1) != SD_OK) {
+	printf("Failed to read root directory entries\n");
+	return -1;
+    }
 
     for(int j =0; j < 8; j++) {
        printf("name of file %d is \"%s\"\n", j,  rde[j].file_name);

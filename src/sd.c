@@ -28,8 +28,9 @@
 //#include "delays.h"
 #include "sd.h"
 #include "rprintf.h"
-
-
+#include "msec.h"
+#include "uart.h"
+#include <stdio.h>
 
 
 #define EMMC_ARG2           ((volatile unsigned int*)(MMIO_BASE+0x00300000))
@@ -135,8 +136,10 @@ int sd_status(unsigned int mask)
 int sd_int(unsigned int mask)
 {
     unsigned int r, m=mask | INT_ERROR_MASK;
-    int cnt = 1000000; while(!(*EMMC_INTERRUPT & m) && cnt--) wait_msec(1);
+    int cnt = 1000000;
+    while(!(*EMMC_INTERRUPT & m) && cnt--) wait_msec(1);
     r=*EMMC_INTERRUPT;
+
     if(cnt<=0 || (r & INT_CMD_TIMEOUT) || (r & INT_DATA_TIMEOUT) ) { *EMMC_INTERRUPT=r; return SD_TIMEOUT; } else
     if(r & INT_ERROR_MASK) { *EMMC_INTERRUPT=r; return SD_ERROR; }
     *EMMC_INTERRUPT=mask;
@@ -184,8 +187,8 @@ int sd_readblock(unsigned int lba, unsigned char *buffer, unsigned int num)
 {
     int r,c=0,d;
     if(num<1) num=1;
-//    uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
-    printk("[sd_readblock] lba = %d num = %d\r\n", lba, num);
+    uart_puts("sd_readblock lba ");/*uart_hex(lba);*/uart_puts(" num ");/*uart_hex(num);*/uart_puts("\n");
+    //printk("[sd_readblock] lba = %d num = %d\r\n", lba, num);
     if(sd_status(SR_DAT_INHIBIT)) {sd_err=SD_TIMEOUT; return 0;}
     unsigned int *buf=(unsigned int *)buffer;
     if(sd_scr[0] & SCR_SUPP_CCS) {
@@ -257,7 +260,12 @@ int sd_init()
 {
     long r,cnt,ccs=0;
     // GPIO_CD
-    r=*GPFSEL4; r&=~(7<<(7*3)); *GPFSEL4=r;
+    r= *GPFSEL4;// read the current value
+    r &= ~(7<<(7*3)); // modify it 
+    *GPFSEL4=r; // write the modified value back
+
+    printf("GPFSEL4 configured.\n");
+
     *GPPUD=2; wait_cycles(150); *GPPUDCLK1=(1<<15); wait_cycles(150); *GPPUD=0; *GPPUDCLK1=0;
     r=*GPHEN1; r|=1<<15; *GPHEN1=r;
 
