@@ -1,6 +1,9 @@
 #include "fat.h"
 #include "sd.h"
+#include "msec.h"
+#include "uart.h"
 #include <string.h>
+#include <stdio.h>
 
 struct boot_sector bs;
 struct file my_file;
@@ -85,10 +88,12 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
     return bytes_read;
 }
 int main() {
+    uint8_t sector_buf[SECTOR_SIZE];
+    uint8_t rde_region[SECTOR_SIZE];
     struct boot_sector *bs = (struct boot_sector*)sector_buf;
     struct root_directory_entry *rde = (struct root_directory_entry*)rde_region;
-    init();
-    readSector(0, sector_buf);
+    sd_init();
+    sd_readblock(0, sector_buf, 1);
     for(int i = 0; i < 16; i++) {
         printf("%02x ", sector_buf[i]);
     }
@@ -100,7 +105,7 @@ int main() {
     printf("number of RDEs = %d\n", bs->num_root_dir_entries);
 
     int b_rde = bs->num_reserved_sectors + bs->num_fat_tables * bs->num_sectors_per_fat;
-    readSector(b_rde, rde_region);
+    sd_readblock(b_rde, rde_region, 1);
 
     for(int j =0; j < 8; j++) {
        printf("name of file %d is \"%s\"\n", j,  rde[j].file_name);

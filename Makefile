@@ -22,6 +22,8 @@ OBJS = \
 	mmu.o\
 	fat.o\
 	sd.o\
+	msec.o\
+	uart.o\
 
 OBJ = $(patsubst %,$(ODIR)/%,$(OBJS))
 
