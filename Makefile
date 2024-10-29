@@ -24,7 +24,6 @@ OBJS = \
 	sd.o\
 	msec.o\
 	uart.o\
-	gpio.o\
 
 OBJ = $(patsubst %,$(ODIR)/%,$(OBJS))
 

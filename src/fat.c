@@ -88,38 +88,42 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
     return bytes_read;
 }
 int main() {
-    uint8_t sector_buf[SECTOR_SIZE];
-    uint8_t rde_region[SECTOR_SIZE];
-    struct boot_sector *bs = (struct boot_sector*)sector_buf;
-    struct root_directory_entry *rde = (struct root_directory_entry*)rde_region;
-    if( sd_init() != SD_OK) {
+    uint8_t buffer[SECTOR_SIZE]; // buffer to hold file data
+    const char *filename = "TESS   ";
+
+    // initialize the sd card
+    if(sd_init() != SD_OK) {
         printf("SD card initialization failed\n");
 	return -1;
     }
 
-    if(sd_readblock(0, sector_buf, 1) != SD_OK) {
-	printf("Failed to read boot sector\n");
-    }
-
-    for(int i = 0; i < 16; i++) {
-        printf("%02x ", sector_buf[i]);
-    }
-    printf("\n");
-    printf("bytes per sector = %d\n", bs->bytes_per_sector);
-    printf("sectors per cluster = %d\n", bs->num_sectors_per_cluster);
-    printf("reserved sectors = %d\n", bs->num_reserved_sectors);
-    printf("number of FATs = %d\n", bs->num_fat_tables);
-    printf("number of RDEs = %d\n", bs->num_root_dir_entries);
-
-    int b_rde = bs->num_reserved_sectors + bs->num_fat_tables * bs->num_sectors_per_fat;
-    if(sd_readblock(b_rde, rde_region, 1) != SD_OK) {
-	printf("Failed to read root directory entries\n");
+    // initialize the FAT filesystem
+    if(fatInit() != 0) {
+        printf("Failed to initialize FAT filesystem\n");
 	return -1;
     }
 
-    for(int j =0; j < 8; j++) {
-       printf("name of file %d is \"%s\"\n", j,  rde[j].file_name);
+    // open the specified file
+    if(fatOpen(filename) != 0) {
+	printf("Failed to open file: %s\n", filename);
+	return -1;
     }
+
+    // read the contents of the file into the buffer
+    int bytes_to_read = SECTOR_SIZE;
+    int bytes_read = fatRead(&my_file, buffer, bytes_to_read);
+    if(bytes_read < 0) {
+	printf("Failed to read file data\n");
+	return -1;
+    }
+
+    // output the read data 
+    printf("Read %d bytes from %s:\n", bytes_read, filename);
+    for(int i = 0; i < bytes_read; i++) {
+	 printf("%02x ", buffer[i]);
+    }
+    printf("\n");
+
     return 0;
 }
 
