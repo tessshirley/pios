@@ -24,6 +24,7 @@ OBJS = \
 	fat.o\
 	msec.o\
 	uart.o\
+	malloc.o\
 
 OBJ = $(patsubst %,$(ODIR)/%,$(OBJS))
 

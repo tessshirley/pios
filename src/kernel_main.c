@@ -13,6 +13,8 @@
 #include "sd.h"
 #include "msec.h"
 #include "uart.h"
+#include "gpio.h"
+#include "malloc.h"
 
 #define SYSTEM_CLOCK_HZ 1000000 // for wait_ms()
 
@@ -60,8 +62,13 @@ void kernel_main() {
     extern int __bss_start, __bss_end;
     char *bssstart, *bssend;
    // esp_printf( my_putc, "Current Execution Level is %d\r\n", getEL());
+
+    // zero out the bss segment
+    bssstart = (char *)&__bss_start;
+    bssend = (char *)&__bss_end;
+
     
-    // FAT Tests //
+              // FAT Tests //
     // initialize the SD card
     if(sd_init() != SD_OK) {
        esp_printf(my_putc, "Failed to initialize SD card\n");
@@ -95,6 +102,10 @@ void kernel_main() {
          esp_printf(my_putc, "%c ", buffer[i]);
     }
     esp_printf(my_putc,"\n");
+
+    while(bssstart < bssend) {
+        *bssstart++ = 0;
+   }
  /*   
 
     // testing page mapping
@@ -139,11 +150,4 @@ void kernel_main() {
 	esp_printf(my_putc, "Correctly failed to allocate more pages than available.\r\n");
     }
   */
-    // zero out the bss segment
-    bssstart = (char *)&__bss_start;
-    bssend = (char *)&__bss_end;
-
-    while(bssstart < bssend) {
-	*bssstart++ = 0;
-    }
 }

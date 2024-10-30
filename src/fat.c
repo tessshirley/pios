@@ -5,6 +5,8 @@
 #include "rprintf.h"
 #include "serial.h"
 #include "mmu.h"
+#include "gpio.h"
+#include "malloc.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,8 +41,12 @@ int fatInit() {
 
     // validate the boot signature and FAT type
     const char *bs_type = bs->fs_type;
-    if(bs->boot_signature != 0xAA55 || strncmp(bs_type, "FAT12", 5) != 0) {
-	    return -1; // invalid filesystem
+    if(bs->boot_signature != 0xAA55) {
+         return -1; // invalid filesystem
+    }
+
+    if(strncmp(bs->fs_type, "FAT16", 5) != 0 && strncmp(bs->fs_type, "FAT32", 5) != 0) {
+        return -1; // unsupported
     }
 
     return 0; // success!
@@ -52,7 +58,7 @@ struct file *fatOpen(const char *filename) {
     uint8_t buffer[SECTOR_SIZE];
 
     // create a new file structure to hold file information
-    struct file *my_file = filename;
+    struct file *my_file = (struct file *)malloc(sizeof(struct file));
     if(my_file == NULL) {
 	return NULL;
     }
@@ -94,10 +100,10 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 	       return -1; // error reading sector
 	     }
 	    if(bytes_read + SECTOR_SIZE > bytes_to_read) {
-	        memcpy(buffer +  bytes_read, sector_buffer, bytes_to_read - bytes_read);
+	        memcpy((char *)buffer +  bytes_read, sector_buffer, bytes_to_read - bytes_read);
 	        bytes_read += bytes_to_read;
 	    } else {
-		memcpy(buffer + bytes_read, sector_buffer, SECTOR_SIZE);
+		memcpy((char *)buffer + bytes_read, sector_buffer, SECTOR_SIZE);
 		bytes_read += SECTOR_SIZE;
 	    }
 	}
