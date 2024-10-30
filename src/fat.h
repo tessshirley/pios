@@ -83,5 +83,6 @@ struct file {
 struct file *fatOpen(const char *filename);
 int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read);
 int main();
+int fatInit();
 
 #endif

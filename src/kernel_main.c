@@ -67,8 +67,7 @@ void kernel_main() {
     bssstart = (char *)&__bss_start;
     bssend = (char *)&__bss_end;
 
-    
-              // FAT Tests //
+         // FAT Tests //
     // initialize the SD card
     if(sd_init() != SD_OK) {
        esp_printf(my_putc, "Failed to initialize SD card\n");
@@ -79,6 +78,8 @@ void kernel_main() {
     if(fatInit() != 0) {
         esp_printf(my_putc, "Failed to initialize FAT filesystem\n");
         return -1;
+    } else {
+	esp_printf(my_putc, "Successfully initialized FAT filesystem\n");
     }
 
     // open the specified file
@@ -103,11 +104,13 @@ void kernel_main() {
     }
     esp_printf(my_putc,"\n");
 
+    /*
     while(bssstart < bssend) {
         *bssstart++ = 0;
-   }
- /*   
+     } 
+   */
 
+    /*
     // testing page mapping
     mapPages((void*)0x0, (void*)0x0);
     // load the L1 page table and enable the MMU

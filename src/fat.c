@@ -22,17 +22,13 @@ unsigned int root_sector;
 
 // FAT initialization function
 int fatInit() {
-    // initialize the SD card
-    if(sd_init() != SD_OK) {
-      esp_printf(my_putc,"SD card initialization failed\n");
-	return -1;
-    }
-    bs = bootSector;
+    sd_init();
 
     uint8_t buffer[SECTOR_SIZE];
+    bs = (struct boot_sector *)bootSector;
 
     // read the boot sector
-    if(sd_readblock(0, buffer, 1) != SD_OK) {
+    if(sd_readblock(0, buffer, 1) != SECTOR_SIZE) {
         return -1; // error reading boot sector
     }
 
@@ -45,16 +41,23 @@ int fatInit() {
          return -1; // invalid filesystem
     }
 
-    if(strncmp(bs->fs_type, "FAT16", 5) != 0 && strncmp(bs->fs_type, "FAT32", 5) != 0) {
+    if(strncmp(&bs_type, "FAT12", 5) != 0) {
         return -1; // unsupported
     }
-
+    
+    // read FAT table from SD card int fat_table 
+    int fat_start = bs->num_reserved_sectors;
+    sd_readblock(fat_start, fat_table, bs->num_sectors_per_fat);
+    
+    // compute root sector
+    root_sector = bs->num_fat_tables + bs->num_sectors_per_fat + bs->num_reserved_sectors + bs->num_hidden_sectors;
+     
     return 0; // success!
 }
 
 // function to open a file
 struct file *fatOpen(const char *filename) {
-    uint32_t root_dir_sector = bs->num_reserved_sectors + (bs->num_fat_tables + bs->num_sectors_per_fat);
+    uint32_t root_dir_sector = bs->num_reserved_sectors + (bs->num_fat_tables * bs->num_sectors_per_fat);
     uint8_t buffer[SECTOR_SIZE];
 
     // create a new file structure to hold file information
@@ -95,7 +98,7 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 		(bs->num_fat_tables * bs->num_sectors_per_fat) + 
 		((current_cluster - 2) * bs->num_sectors_per_cluster);
 
-	for(int i = 0; i < SECTORS_PER_CLUSTER && bytes_read < bytes_to_read; ++i) {
+	for(int i = 0; i < bs->num_sectors_per_cluster && bytes_read < bytes_to_read; ++i) {
 	    if(sd_readblock(first_sector_of_cluster + i, sector_buffer, 1) != SD_OK) {
 	       return -1; // error reading sector
 	     }
@@ -109,9 +112,10 @@ int fatRead(struct file *file, void *buffer, uint32_t bytes_to_read){
 	}
 
 	// move to the next cluster in the FAT chain
-	uint32_t fat_sector = bs->num_reserved_sectors + (current_cluster / (SECTOR_SIZE / 2));
-        uint32_t fat_offset = (current_cluster % (SECTOR_SIZE / 2)) * 2;
-        uint8_t fat_buffer[SECTOR_SIZE];
+	uint32_t fat_sector = bs->num_reserved_sectors + (current_cluster *3 / 2) / SECTOR_SIZE;
+        uint32_t fat_offset = (current_cluster * 3 / 2) % SECTOR_SIZE;
+        uint32_t bytes_read = 0;
+	uint8_t fat_buffer[SECTOR_SIZE];
 
         if(sd_readblock(fat_sector, fat_buffer, 1) != SD_OK) {
             return -1; // error reading FAT
