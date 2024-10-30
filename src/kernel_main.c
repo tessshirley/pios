@@ -81,12 +81,13 @@ void kernel_main() {
     } else {
 	esp_printf(my_putc, "Successfully initialized FAT filesystem\n");
     }
-
+ 
     // open the specified file
-    struct file *file_handle = fatOpen("/mnt/disk/tess.txt");
-    if(file_handle == NULL) {
-        esp_printf(my_putc, "Failed to open file\n");
-        return -1;
+    const char *file_handle = "/mnt/disk/test";
+    if(fatOpen(file_handle) == NULL){
+        esp_printf(my_putc, "file not found\n");
+    } else {
+	esp_printf(my_putc, "file found!");
     }
 
     // read the contents of the file into the buffer
@@ -98,7 +99,7 @@ void kernel_main() {
     }
 
     // output the read data 
-    esp_printf(my_putc, "Read %d bytes from %s:\n", bytes_read, file_handle->rde.file_name);
+    esp_printf(my_putc, "Read %d bytes from %s:\n", bytes_read, file_handle);
     for(int i = 0; i < bytes_read; i++) {
          esp_printf(my_putc, "%c ", buffer[i]);
     }

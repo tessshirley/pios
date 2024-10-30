@@ -68,5 +68,6 @@ rootfs.img:
 	sudo mkdir -p /mnt/disk/boot/firmware
 	sudo mkdir /mnt/disk/bin
 	sudo mkdir /mnt/disk/etc
+	sudo bash -c "echo test > /mnt/disk/test"
 	sudo umount /mnt/disk
 
